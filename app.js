@@ -16,6 +16,21 @@
     window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }
 
+  // Mobile Safari doesn't shrink the layout viewport when its bottom toolbar is
+  // showing, so `position: fixed; bottom: 0` elements render underneath it. Track
+  // the real visible viewport and expose the gap as a CSS var the fixed reveal
+  // bar can offset itself by, so it always sits above the browser chrome.
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    const updateVvOffset = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      document.documentElement.style.setProperty("--vv-bottom-offset", `${Math.max(0, Math.round(offset))}px`);
+    };
+    vv.addEventListener("resize", updateVvOffset);
+    vv.addEventListener("scroll", updateVvOffset);
+    updateVvOffset();
+  }
+
   // ---------------- utilities ----------------
   function shuffle(arr) {
     const a = arr.slice();
@@ -215,9 +230,11 @@
       recap.innerHTML = `<p class="result-recap-title">Worth a second look</p><div class="recap-grid"></div>`;
       const grid = recap.querySelector(".recap-grid");
       uniqueMissed.forEach((f) => {
-        const item = document.createElement("div");
+        const item = document.createElement("button");
+        item.type = "button";
         item.className = "recap-item was-wrong";
-        item.innerHTML = `<img src="${f.image}" alt=""><div class="recap-item-body"><div class="recap-item-name">${f.common}</div><div class="recap-item-sci">${f.scientific}</div></div>`;
+        item.innerHTML = `<img src="${f.image}" alt=""><div class="recap-item-body"><div class="recap-item-name">${f.common}</div><div class="recap-item-sci">${f.scientific}</div><div class="recap-item-cta">Learn more →</div></div>`;
+        item.addEventListener("click", () => openSpeciesModal(f.id));
         grid.appendChild(item);
       });
     } else {
@@ -289,9 +306,11 @@
       return;
     }
     items.forEach((f) => {
-      const card = document.createElement("div");
+      const card = document.createElement("button");
+      card.type = "button";
       card.className = "guide-card";
-      card.innerHTML = `<img src="${f.image}" alt="${f.common}" loading="lazy"><div class="guide-card-body"><div class="guide-card-name">${f.common}</div><div class="guide-card-sci">${f.scientific}</div></div>`;
+      card.innerHTML = `<img src="${f.image}" alt="${f.common}" loading="lazy"><div class="guide-card-body"><div class="guide-card-name">${f.common}</div><div class="guide-card-sci">${f.scientific}</div><div class="guide-card-cta">Learn more →</div></div>`;
+      card.addEventListener("click", () => openSpeciesModal(f.id));
       grid.appendChild(card);
     });
   }
@@ -334,6 +353,70 @@
   document.getElementById("credits-close").addEventListener("click", () => (modal.hidden = true));
   modal.addEventListener("click", (e) => {
     if (e.target === modal) modal.hidden = true;
+  });
+
+  // ---------------- species detail modal ----------------
+  const speciesModal = document.getElementById("species-modal");
+  let speciesModalFlowerId = null;
+
+  function openSpeciesModal(flowerId) {
+    const f = FLOWERS.find((x) => x.id === flowerId);
+    if (!f) return;
+    speciesModalFlowerId = flowerId;
+    document.getElementById("species-photo").src = f.image;
+    document.getElementById("species-photo").alt = f.common;
+    document.getElementById("species-family").textContent = f.family;
+    document.getElementById("species-title").textContent = f.common;
+    document.getElementById("species-sci").textContent = f.scientific;
+    document.getElementById("species-detail").innerHTML = (f.detail || "")
+      .split("\n\n")
+      .map((p) => `<p>${p}</p>`)
+      .join("");
+    speciesModal.hidden = false;
+  }
+  function closeSpeciesModal() {
+    speciesModal.hidden = true;
+    speciesModalFlowerId = null;
+  }
+  document.getElementById("species-close").addEventListener("click", closeSpeciesModal);
+  speciesModal.addEventListener("click", (e) => {
+    if (e.target === speciesModal) closeSpeciesModal();
+  });
+  document.getElementById("species-photo-btn").addEventListener("click", () => {
+    const f = FLOWERS.find((x) => x.id === speciesModalFlowerId);
+    if (f) openLightbox(f.image, f.common);
+  });
+
+  // ---------------- fullscreen photo lightbox (pinch-zoomable via native browser zoom) ----------------
+  const lightbox = document.getElementById("photo-lightbox");
+  const lightboxImg = document.getElementById("lightbox-img");
+
+  function openLightbox(src, alt) {
+    lightboxImg.src = src;
+    lightboxImg.alt = alt || "";
+    lightbox.hidden = false;
+    document.body.classList.add("lightbox-open");
+  }
+  function closeLightbox() {
+    lightbox.hidden = true;
+    document.body.classList.remove("lightbox-open");
+  }
+  document.getElementById("lightbox-close").addEventListener("click", closeLightbox);
+  lightbox.addEventListener("click", (e) => {
+    // close on backdrop tap, but not on the photo itself — after pinch-zooming,
+    // a tap is more likely an attempt to reposition than to dismiss
+    if (e.target !== lightboxImg) closeLightbox();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!lightbox.hidden) closeLightbox();
+    else if (!speciesModal.hidden) closeSpeciesModal();
+    else if (!modal.hidden) modal.hidden = true;
+  });
+
+  document.getElementById("quiz-photo-wrap").addEventListener("click", () => {
+    const flower = currentFlower();
+    if (flower) openLightbox(flower.image, "Photograph of a wildflower to identify");
   });
 
   // ---------------- petal confetti ----------------
