@@ -69,6 +69,7 @@
 
   function renderQuestion() {
     answered = false;
+    screens.quiz.classList.remove("is-answered");
     const flower = currentFlower();
     const total = roundFlowers.length;
 
@@ -146,6 +147,7 @@
     document.getElementById("reveal-name").textContent = flower.common;
     document.getElementById("reveal-sci").textContent = flower.scientific;
     reveal.hidden = false;
+    screens.quiz.classList.add("is-answered");
 
     document.getElementById("quiz-score").textContent = score;
     if (streak >= 2) {
