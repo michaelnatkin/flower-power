@@ -97,6 +97,7 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
+body.lightbox-open { overflow: hidden; }
 img { max-width: 100%; display: block; }
 button { font: inherit; color: inherit; }
 input { font: inherit; }
@@ -235,7 +236,10 @@ main#app { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) 
   background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius);
   padding: clamp(16px, 3vw, 28px); box-shadow: var(--shadow);
 }
-.specimen-photo-wrap { position: relative; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 22px; background: var(--ground); }
+.specimen-photo-wrap {
+  position: relative; display: block; width: 100%; border-radius: var(--radius-sm); overflow: hidden;
+  margin-bottom: 22px; background: var(--ground); border: none; padding: 0; cursor: zoom-in;
+}
 .specimen-photo {
   width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
   animation: photo-reveal 0.5s cubic-bezier(.2,.7,.3,1) both;
@@ -245,6 +249,13 @@ main#app { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) 
   position: absolute; bottom: 10px; left: 10px; font-family: var(--font-mono); font-weight: 600; font-size: 0.78rem;
   background: rgba(16,26,20,0.72); color: #F4F5EC; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.04em;
 }
+.specimen-zoom-hint {
+  position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 999px;
+  background: rgba(16,26,20,0.62); display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.specimen-photo-wrap:hover .specimen-zoom-hint { background: rgba(16,26,20,0.82); }
+.specimen-zoom-hint svg { width: 16px; height: 16px; fill: none; stroke: #F4F5EC; stroke-width: 2; stroke-linecap: round; }
 .specimen-prompt { font-family: var(--font-display); font-style: italic; font-weight: 500; font-size: 1.2rem; margin: 0 0 16px; color: var(--fir-950); }
 
 .answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -267,6 +278,8 @@ main#app { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) 
 
 .reveal-panel { margin-top: 22px; padding-top: 20px; border-top: 1px dashed var(--line-strong); animation: fact-in 0.4s ease both; }
 @keyframes fact-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* fades only (no transform) so it doesn't fight the visualViewport-offset transform below */
+@keyframes fact-in-fixed { from { opacity: 0; } to { opacity: 1; } }
 .reveal-eyebrow { font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.06em; text-transform: uppercase; margin: 0 0 6px; }
 .reveal-eyebrow.is-correct { color: var(--correct); }
 .reveal-eyebrow.is-wrong { color: var(--wrong); }
@@ -301,6 +314,12 @@ main#app { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) 
     background: var(--paper-raised); border-top: 1px solid var(--line-strong);
     box-shadow: 0 -6px 20px rgba(20,42,32,0.16);
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    animation: fact-in-fixed 0.3s ease both;
+    /* mobile Safari doesn't shrink the layout viewport when its toolbar is showing,
+       so a plain bottom:0 fixed element ends up rendered behind that toolbar.
+       app.js tracks window.visualViewport and sets this custom property so the
+       bar is nudged up to sit exactly at the true visible edge. */
+    transform: translateY(calc(-1 * var(--vv-bottom-offset, 0px)));
   }
   .reveal-eyebrow { display: none; }
   .reveal-text { flex: 1 1 auto; min-width: 0; }
@@ -322,13 +341,21 @@ main#app { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) 
 .result-recap { text-align: left; }
 .result-recap-title { font-family: var(--font-mono); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin: 0 0 14px; }
 .recap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-.recap-item { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: var(--paper-raised); }
+.recap-item {
+  border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: var(--paper-raised);
+  display: block; width: 100%; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.recap-item:hover { transform: translateY(-2px); }
 .recap-item img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
 .recap-item-body { padding: 10px 12px; }
 .recap-item-name { font-weight: 700; font-size: 0.86rem; }
 .recap-item-sci { font-family: var(--font-display); font-style: italic; font-size: 0.8rem; color: var(--ink-soft); }
+.recap-item-cta { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fir-700); margin-top: 4px; }
 .recap-item.was-correct { box-shadow: inset 0 0 0 2px var(--correct); }
 .recap-item.was-wrong { box-shadow: inset 0 0 0 2px var(--wrong); }
+.recap-item.was-correct:hover { box-shadow: inset 0 0 0 2px var(--correct), var(--shadow); }
+.recap-item.was-wrong:hover { box-shadow: inset 0 0 0 2px var(--wrong), var(--shadow); }
 
 /* ---------------- field guide screen ---------------- */
 .guide-head { padding-top: 20px; }
@@ -347,13 +374,15 @@ main#app { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) 
 .guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; padding-bottom: 20px; }
 .guide-card {
   background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius-sm);
-  overflow: hidden; text-align: left; padding: 0;
-  box-shadow: var(--shadow);
+  overflow: hidden; text-align: left; padding: 0; display: block; width: 100%; font: inherit; color: inherit;
+  cursor: pointer; box-shadow: var(--shadow); transition: transform 0.15s ease;
 }
+.guide-card:hover { transform: translateY(-2px); }
 .guide-card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; }
 .guide-card-body { padding: 13px 15px 16px; }
 .guide-card-name { font-weight: 700; font-size: 0.98rem; color: var(--fir-950); }
 .guide-card-sci { font-family: var(--font-display); font-style: italic; color: var(--ink-soft); font-size: 0.88rem; margin: 2px 0 0; }
+.guide-card-cta { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fir-700); margin-top: 8px; }
 .guide-empty { color: var(--ink-soft); padding: 40px 0; text-align: center; }
 
 /* ---------------- footer ---------------- */
@@ -380,6 +409,49 @@ main#app { max-width: 1080px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px) 
 .credit-name { font-weight: 600; }
 .credit-meta { color: var(--ink-soft); text-align: right; }
 .credit-meta a { color: var(--fir-700); }
+
+/* ---------------- species detail modal ---------------- */
+.modal-species { max-width: 560px; max-height: 88vh; position: relative; }
+.modal-close-float {
+  position: absolute; top: 12px; right: 12px; z-index: 2; width: 34px; height: 34px; border-radius: 999px;
+  background: rgba(16,26,20,0.55); color: #F4F5EC; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+}
+.species-photo-btn {
+  display: block; width: 100%; border: none; padding: 0; margin: 0; cursor: zoom-in; position: relative;
+  border-radius: var(--radius) var(--radius) 0 0; overflow: hidden; flex: 0 0 auto; background: var(--ground);
+}
+.species-photo { width: 100%; aspect-ratio: 16/10; object-fit: cover; display: block; }
+.species-photo-hint {
+  position: absolute; bottom: 10px; right: 10px; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.03em;
+  background: rgba(16,26,20,0.62); color: #F4F5EC; padding: 5px 10px; border-radius: 999px;
+}
+.modal-species-body { padding: 20px 24px 26px; overflow-y: auto; flex: 1 1 auto; }
+.species-family {
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--salmonberry); font-weight: 600; margin: 0 0 6px;
+}
+#species-title { font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; margin: 0; color: var(--fir-950); }
+.species-sci { font-family: var(--font-display); font-style: italic; color: var(--ink-soft); font-size: 1.05rem; margin: 2px 0 16px; }
+.species-detail p { font-size: 0.96rem; line-height: 1.65; color: var(--ink); margin: 0 0 14px; }
+.species-detail p:last-child { margin-bottom: 0; }
+
+/* ---------------- fullscreen photo lightbox ---------------- */
+.lightbox {
+  position: fixed; inset: 0; z-index: 70; background: rgba(8,14,10,0.94);
+  display: flex; align-items: center; justify-content: center;
+}
+.lightbox[hidden] { display: none; }
+.lightbox-scroll {
+  width: 100%; height: 100%; overflow: auto; display: flex; align-items: center; justify-content: center;
+  /* allow native pinch-zoom and panning of the photo within the overlay */
+  touch-action: pinch-zoom pan-x pan-y;
+}
+.lightbox-img { max-width: min(96vw, 1400px); max-height: 94vh; width: auto; height: auto; object-fit: contain; display: block; }
+.lightbox-close {
+  position: fixed; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right));
+  z-index: 2; width: 40px; height: 40px; border-radius: 999px; background: rgba(255,255,255,0.14);
+  color: #F4F5EC; font-size: 1.1rem; border: 1px solid rgba(255,255,255,0.24);
+}
 
 /* ---------------- petal canvas (confetti) ---------------- */
 #petal-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 60; display: none; }
