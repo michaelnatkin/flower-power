@@ -1,4 +1,4 @@
-/* Bloom ID — PNW Wildflower Quiz — app logic */
+/* Jenny's Wildflower Quiz — app logic */
 (function () {
   "use strict";
 
