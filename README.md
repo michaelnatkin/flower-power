@@ -1,4 +1,4 @@
-# Bloom ID — a Pacific Northwest Wildflower Quiz
+# Jenny's Wildflower Quiz — a Pacific Northwest Wildflower Quiz
 
 A single-page photo quiz built around 46 real Pacific Northwest wildflowers. Pick a round length, look at a real trail photo, and pick the correct common name from four choices. There's also a browsable field guide with search and color filtering.
 
