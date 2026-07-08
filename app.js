@@ -82,11 +82,51 @@
     return roundFlowers[qIndex];
   }
 
+  // Preload into the browser cache so the *next* question's request resolves
+  // instantly. This alone doesn't guarantee anything about the visible <img>
+  // though — that's handled separately in setQuizPhoto, which is the part
+  // that actually matters for correctness.
+  const preloadedImages = new Set();
+  function preloadImage(src) {
+    if (preloadedImages.has(src)) return;
+    preloadedImages.add(src);
+    const img = new Image();
+    img.src = src;
+  }
+
+  function setQuizPhoto(src, alt) {
+    const photo = document.getElementById("quiz-photo");
+    // Freeze/hide immediately: no animation running, opacity pinned to 0, so
+    // there's no stale frame of the old photo and no fade plays over blank
+    // pixels. Only once *this exact element* fires its own load/error event
+    // — i.e. the new photo is actually decoded and ready to paint — do we
+    // restart the fade-in. A separate preloaded Image object was tried here
+    // first, but it doesn't guarantee this element's own load finishes at
+    // the same time, which is what let the "dissolve into blank, then pop"
+    // happen.
+    photo.style.animation = "none";
+    photo.style.opacity = "0";
+    const onReady = () => {
+      photo.removeEventListener("load", onReady);
+      photo.removeEventListener("error", onReady);
+      photo.style.opacity = "";
+      void photo.offsetWidth;
+      photo.style.animation = "";
+    };
+    photo.addEventListener("load", onReady);
+    photo.addEventListener("error", onReady);
+    photo.alt = alt;
+    photo.src = src;
+  }
+
   function renderQuestion() {
     answered = false;
     screens.quiz.classList.remove("is-answered");
     const flower = currentFlower();
     const total = roundFlowers.length;
+
+    const nextFlower = roundFlowers[qIndex + 1];
+    if (nextFlower) preloadImage(nextFlower.image);
 
     document.getElementById("quiz-counter").textContent = `Specimen ${String(qIndex + 1).padStart(2, "0")} / ${total}`;
     document.getElementById("specimen-number").textContent = String(qIndex + 1).padStart(2, "0");
@@ -101,13 +141,7 @@
       streakBadge.hidden = true;
     }
 
-    const photo = document.getElementById("quiz-photo");
-    photo.src = flower.image;
-    photo.alt = "Photograph of a wildflower to identify";
-    // restart the reveal animation
-    photo.classList.remove("specimen-photo");
-    void photo.offsetWidth;
-    photo.classList.add("specimen-photo");
+    setQuizPhoto(flower.image, "Photograph of a wildflower to identify");
 
     const options = shuffle([flower, ...pickDistractors(flower, 3)]);
     const grid = document.getElementById("answer-grid");
