@@ -90,16 +90,18 @@
           <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 21 21M8 10.5h5M10.5 8v5"></path></svg>
         </span>
       </button>
-      <p class="specimen-prompt">What wildflower is this?</p>
-      <div class="answer-grid" id="answer-grid" role="group" aria-label="Answer choices"></div>
+      <div class="quiz-answer-col">
+        <p class="specimen-prompt">What wildflower is this?</p>
+        <div class="answer-grid" id="answer-grid" role="group" aria-label="Answer choices"></div>
 
-      <div class="reveal-panel" id="reveal-panel" hidden>
-        <div class="reveal-text">
-          <p class="reveal-eyebrow" id="reveal-eyebrow"></p>
-          <p class="reveal-name" id="reveal-name"></p>
-          <p class="reveal-sci" id="reveal-sci"></p>
+        <div class="reveal-panel" id="reveal-panel" hidden>
+          <div class="reveal-text">
+            <p class="reveal-eyebrow" id="reveal-eyebrow"></p>
+            <p class="reveal-name" id="reveal-name"></p>
+            <p class="reveal-sci" id="reveal-sci"></p>
+          </div>
+          <button class="btn btn-primary" id="btn-next" type="button">Next<span class="btn-next-word"> specimen</span> →</button>
         </div>
-        <button class="btn btn-primary" id="btn-next" type="button">Next<span class="btn-next-word"> specimen</span> →</button>
       </div>
     </div>
   </section>
